@@ -18,22 +18,22 @@ module.exports = async function createCache(
     },
 
     async set(filename, data) {
-      const key = this._getCacheKey(filename);
+      const key = await this._getCacheKey(filename);
       return await storage.set(key, data);
     },
 
     async has(filename) {
-      const key = this._getCacheKey(filename);
+      const key = await this._getCacheKey(filename);
       return await storage.has(key);
     },
 
     async get(filename) {
-      const key = this._getCacheKey(filename);
+      const key = await this._getCacheKey(filename);
       return await storage.get(key);
     },
 
     async delete(filename) {
-      const key = this._getCacheKey(filename);
+      const key = await this._getCacheKey(filename);
       return await storage.delete(key);
     },
 
