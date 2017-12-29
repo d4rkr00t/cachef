@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const promisify = require("util").promisify;
+const rimraf = promisify(require("rimraf"));
 const { mkdirp, fstat } = require("../utils");
 
 const writeFile = promisify(fs.writeFile);
@@ -37,7 +38,7 @@ module.exports = async function createFileStorage() {
     },
 
     async clear() {
-      await unlink(this.dir);
+      await rimraf(this.dir);
       await mkdirp(this.dir);
     },
 
