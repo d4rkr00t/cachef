@@ -19,6 +19,10 @@ module.exports = async function createFileStorage() {
       return await writeFile(this._getCacheFileName(key), value);
     },
 
+    async afterSet(key) {
+      // noop
+    },
+
     async has(key) {
       try {
         return (await fstat(this._getCacheFileName(key))).isFile();

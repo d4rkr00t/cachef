@@ -6,7 +6,7 @@ module.exports = async function createCache(
   opts = {},
   storage = createFileStorage()
 ) {
-  await storage.init(opts); // ????
+  await storage.init(opts);
   const optsHash = Object.keys(opts).reduce(
     (acc, key) => `${acc};${key}:${String(opts[key])}`,
     ""
@@ -21,7 +21,10 @@ module.exports = async function createCache(
     async set(filename, data) {
       const key = await this._getCacheKey(filename);
       try {
-        return await storage.set(key, data);
+        await storage.set(key, data);
+        if (storage.afterSet) {
+          await storage.afterSet(key);
+        }
       } catch (e) {
         throw new CachefError(
           `Unable to add '${filename}' to cache.`,
