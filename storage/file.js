@@ -32,9 +32,7 @@ module.exports = async function createFileStorage() {
     },
 
     async delete(key) {
-      try {
-        return unlink(this._getCacheFileName(key));
-      } catch (e) {}
+      return unlink(this._getCacheFileName(key));
     },
 
     async clear() {

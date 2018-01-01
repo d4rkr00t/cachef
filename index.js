@@ -1,5 +1,6 @@
 const createFileStorage = require("./storage/file");
 const { md5, fstat } = require("./utils");
+const CachefError = require("./error");
 
 module.exports = async function createCache(
   opts = {},
@@ -19,7 +20,15 @@ module.exports = async function createCache(
 
     async set(filename, data) {
       const key = await this._getCacheKey(filename);
-      return await storage.set(key, data);
+      try {
+        return await storage.set(key, data);
+      } catch (e) {
+        throw new CachefError(
+          `Unable to add '${filename}' to cache.`,
+          e.message,
+          e.stack
+        );
+      }
     },
 
     async has(filename) {
@@ -29,16 +38,28 @@ module.exports = async function createCache(
 
     async get(filename) {
       const key = await this._getCacheKey(filename);
-      return await storage.get(key);
+      try {
+        return await storage.get(key);
+      } catch (e) {
+        throw new CachefError(
+          `Unable to read '${filename}' from cache.`,
+          e.message,
+          e.stack
+        );
+      }
     },
 
     async delete(filename) {
       const key = await this._getCacheKey(filename);
-      return await storage.delete(key);
+      try {
+        return await storage.delete(key);
+      } catch (e) {} // Ignore error
     },
 
     async clear() {
-      return await storage.clear();
+      try {
+        return await storage.clear();
+      } catch (e) {} // Ignore error
     }
   };
 };
