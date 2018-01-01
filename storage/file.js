@@ -19,7 +19,7 @@ module.exports = async function createFileStorage() {
       return await writeFile(this._getCacheFileName(key), value);
     },
 
-    async afterSet(key) {
+    async onUpdate(type, key) {
       // noop
     },
 

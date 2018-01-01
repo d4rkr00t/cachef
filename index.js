@@ -22,8 +22,8 @@ module.exports = async function createCache(
       const key = await this._getCacheKey(filename);
       try {
         await storage.set(key, data);
-        if (storage.afterSet) {
-          await storage.afterSet(key);
+        if (storage.onUpdate) {
+          await storage.onUpdate("set", key);
         }
       } catch (e) {
         throw new CachefError(
@@ -55,13 +55,19 @@ module.exports = async function createCache(
     async delete(filename) {
       const key = await this._getCacheKey(filename);
       try {
-        return await storage.delete(key);
+        await storage.delete(key);
+        if (storage.onUpdate) {
+          await storage.onUpdate("delete", key);
+        }
       } catch (e) {} // Ignore error
     },
 
     async clear() {
       try {
-        return await storage.clear();
+        await storage.clear();
+        if (storage.onUpdate) {
+          await storage.onUpdate("clear", key);
+        }
       } catch (e) {} // Ignore error
     }
   };
