@@ -2,11 +2,9 @@ const createFileStorage = require("./storage/file");
 const { md5, fstat } = require("./utils");
 const CachefError = require("./error");
 
-module.exports = async function createCache(
-  opts = {},
-  storage = createFileStorage()
-) {
-  await storage.init(opts);
+module.exports = async function createCache(opts = {}, storage) {
+  storage = storage || (await createFileStorage(opts));
+
   const optsHash = Object.keys(opts).reduce(
     (acc, key) => `${acc};${key}:${String(opts[key])}`,
     ""
@@ -15,7 +13,7 @@ module.exports = async function createCache(
   return {
     async _getCacheKey(filename) {
       const { mtime } = await fstat(filename);
-      const hash = md5(`${filename}:${optsHash}:${mtime}`);
+      return md5(`${filename}:${optsHash}:${mtime}`);
     },
 
     async set(filename, data) {

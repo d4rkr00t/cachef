@@ -8,13 +8,11 @@ const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
 
-module.exports = async function createFileStorage() {
-  return {
-    async init({ dir }) {
-      this.dir = path.resolve(dir || ".cache");
-      await mkdirp(this.dir);
-    },
+module.exports = async function createFileStorage({ dir }) {
+  const dir = path.resolve(dir || ".cache");
+  await mkdirp(dir);
 
+  return {
     async set(key, value) {
       return await writeFile(this._getCacheFileName(key), value);
     },
@@ -40,12 +38,12 @@ module.exports = async function createFileStorage() {
     },
 
     async clear() {
-      await rimraf(this.dir);
-      await mkdirp(this.dir);
+      await rimraf(dir);
+      await mkdirp(dir);
     },
 
     _getCacheFileName(key) {
-      return path.join(this.dir, `${key}.cache`);
+      return path.join(dir, `${key}.cache`);
     }
   };
 };
