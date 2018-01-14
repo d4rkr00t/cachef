@@ -8,8 +8,8 @@ const writeFile = promisify(fs.writeFile);
 const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
 
-module.exports = async function createFileStorage({ dir }) {
-  const dir = path.resolve(dir || ".cache");
+module.exports = async function createFileStorage(opts) {
+  const dir = path.resolve(opts.dir || ".cache");
   await mkdirp(dir);
 
   return {
