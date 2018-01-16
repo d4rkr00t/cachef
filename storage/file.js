@@ -1,12 +1,43 @@
 const fs = require("fs");
 const path = require("path");
 const promisify = require("util").promisify;
+const stream = require("stream");
 const rimraf = promisify(require("rimraf"));
 const { mkdirp, fstat } = require("../utils");
 
-const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
 const unlink = promisify(fs.unlink);
+
+const CHUNK_SIZE = 500;
+
+function strToStream(str, chunkSize) {
+  const strStream = stream.PassThrough();
+  const writeToStream = pos => {
+    if (pos > str.length) return strStream.end();
+    strStream.write(str.substr(pos, pos + chunkSize));
+    process.nextTick(() => writeToStream(pos + chunkSize));
+  };
+  writeToStream(0);
+  return strStream;
+}
+
+function writeStream(filename, content) {
+  return new Promise(resolve => {
+    const stream = fs.createWriteStream(filename);
+    const strStream = strToStream(content, CHUNK_SIZE);
+    strStream.pipe(stream);
+    strStream.on("end", () => stream.end());
+  });
+}
+
+function readStream(filename) {
+  return new Promise(resolve => {
+    let data = "";
+    const readStream = fs.createReadStream(filename, "utf8");
+    readStream
+      .on("data", chunk => (data += chunk))
+      .on("end", () => resolve(data));
+  });
+}
 
 module.exports = async function createFileStorage(opts) {
   const dir = path.resolve(opts.dir || ".cache");
@@ -14,7 +45,8 @@ module.exports = async function createFileStorage(opts) {
 
   return {
     async set(key, value) {
-      return await writeFile(this._getCacheFileName(key), value);
+      if (await this.has(key)) return;
+      return await writeStream(this._getCacheFileName(key), value);
     },
 
     async onUpdate(type, key) {
@@ -30,11 +62,11 @@ module.exports = async function createFileStorage(opts) {
     },
 
     async get(key) {
-      return readFile(this._getCacheFileName(key), "utf8");
+      return await readStream(this._getCacheFileName(key));
     },
 
     async delete(key) {
-      return unlink(this._getCacheFileName(key));
+      return await unlink(this._getCacheFileName(key));
     },
 
     async clear() {

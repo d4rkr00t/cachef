@@ -5,10 +5,7 @@ const CachefError = require("./error");
 module.exports = async function createCache(opts = {}, storage) {
   storage = storage || (await createFileStorage(opts));
 
-  const optsHash = Object.keys(opts).reduce(
-    (acc, key) => `${acc};${key}:${String(opts[key])}`,
-    ""
-  );
+  const optsHash = Object.keys(opts).reduce((acc, key) => `${acc};${key}:${String(opts[key])}`, "");
 
   return {
     async _getCacheKey(filename) {
@@ -24,11 +21,7 @@ module.exports = async function createCache(opts = {}, storage) {
           await storage.onUpdate("set", key);
         }
       } catch (e) {
-        throw new CachefError(
-          `Unable to add '${filename}' to cache.`,
-          e.message,
-          e.stack
-        );
+        throw new CachefError(`Unable to add '${filename}' to cache.`, e.message, e.stack);
       }
     },
 
@@ -42,11 +35,7 @@ module.exports = async function createCache(opts = {}, storage) {
       try {
         return await storage.get(key);
       } catch (e) {
-        throw new CachefError(
-          `Unable to read '${filename}' from cache.`,
-          e.message,
-          e.stack
-        );
+        throw new CachefError(`Unable to read '${filename}' from cache.`, e.message, e.stack);
       }
     },
 
