@@ -12,8 +12,8 @@ const CHUNK_SIZE = 500;
 function strToStream(str, chunkSize) {
   const strStream = stream.PassThrough();
   const writeToStream = pos => {
-    if (pos > str.length) return strStream.end();
-    strStream.write(str.substr(pos, pos + chunkSize));
+    if (pos >= str.length) return strStream.end();
+    strStream.write(str.substr(pos, chunkSize));
     process.nextTick(() => writeToStream(pos + chunkSize));
   };
   writeToStream(0);
@@ -25,7 +25,10 @@ function writeStream(filename, content) {
     const stream = fs.createWriteStream(filename);
     const strStream = strToStream(content, CHUNK_SIZE);
     strStream.pipe(stream);
-    strStream.on("end", () => stream.end());
+    strStream.on("end", () => {
+      stream.end();
+      resolve();
+    });
   });
 }
 
