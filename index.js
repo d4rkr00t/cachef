@@ -7,6 +7,7 @@ const {
   mkdirp,
   hash,
   fstat,
+  checksum,
   readStream,
   writeStream,
   getOptsHash
@@ -16,24 +17,22 @@ const CachefError = require("./error");
 // Write N characters per iteration, then unblock the thread
 const WRITE_CHUNK_SIZE = 500;
 
-module.exports = async function createCache(opts = {}) {
-  const dir = path.resolve(opts.dir || ".cache");
+module.exports = async function createCache(
+  opts = {
+    dir: ".cache",
+    prefix: ""
+  }
+) {
+  const optsHash = getOptsHash(opts);
+  const dir = path.resolve(opts.dir);
+  const { prefix } = opts;
+
   await mkdirp(dir);
 
-  const optsHash = getOptsHash(opts);
-
   return {
-    _keyCache: [],
-
     async _getCacheKey(filename) {
-      const { mtime } = await fstat(filename);
-      if (this._keyCache[`${filename}:${mtime}`]) {
-        return this._keyCache[`${filename}:${mtime}:${optsHash}`];
-      }
-      const fileContent = await readStream(filename);
-      const key = `${hash(filename)}:${hash(fileContent)}:${hash(optsHash)}`;
-      this._keyCache[`${filename}:${mtime}:${optsHash}`] = key;
-      return key;
+      const chsm = checksum(filename);
+      return `${prefix}${hash(filename)}:${chsm}:${hash(optsHash)}`;
     },
 
     _getCacheFileName(key) {
@@ -101,7 +100,6 @@ module.exports = async function createCache(opts = {}) {
   };
 };
 
-// TODO: Cache prefix
 // TODO: Cache key cache (inception O.o)
 // TODO: Add flow types
 // TODO: Tests

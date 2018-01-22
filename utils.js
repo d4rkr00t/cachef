@@ -46,6 +46,11 @@ function writeStream(chunkSize, filename, content) {
   });
 }
 
+async function checksum(filepath) {
+  const content = await readStream(filepath);
+  return hash(content);
+}
+
 function getOptsHash(opts) {
   return Object.keys(opts).reduce(
     (acc, key) => `${acc};${key}:${String(opts[key])}`,
@@ -53,4 +58,12 @@ function getOptsHash(opts) {
   );
 }
 
-module.exports = { hash, fstat, mkdirp, readStream, writeStream, getOptsHash };
+module.exports = {
+  hash,
+  fstat,
+  mkdirp,
+  readStream,
+  writeStream,
+  getOptsHash,
+  checksum
+};
