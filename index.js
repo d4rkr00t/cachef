@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const promisify = require("util").promisify;
 const rimraf = promisify(require("rimraf"));
+const unlink = promisify(fs.unlink);
 const {
   mkdirp,
   hash,
@@ -12,7 +13,8 @@ const {
 } = require("./utils");
 const CachefError = require("./error");
 
-const unlink = promisify(fs.unlink);
+// Write N characters per iteration, then unblock the thread
+const WRITE_CHUNK_SIZE = 500;
 
 module.exports = async function createCache(opts = {}) {
   const dir = path.resolve(opts.dir || ".cache");
@@ -38,16 +40,19 @@ module.exports = async function createCache(opts = {}) {
       return path.join(dir, `${key}.cache`);
     },
 
-    async set(filename, data) {
+    async set(filename, value) {
+      if (await this.has(filename)) return;
+
       const key = await this._getCacheKey(filename);
-
-      if (await this.has(key)) return;
-
       try {
-        return await writeStream(this._getCacheFileName(key), value);
+        return await writeStream(
+          WRITE_CHUNK_SIZE,
+          this._getCacheFileName(key),
+          value
+        );
       } catch (e) {
         try {
-          await storage.delete(key);
+          await this.delete(filename);
         } catch (e) {}
 
         throw new CachefError(
@@ -96,8 +101,8 @@ module.exports = async function createCache(opts = {}) {
   };
 };
 
+// TODO: Cache prefix
 // TODO: Cache key cache (inception O.o)
-// TODO: Partially self cleaning be using file path as a directory name and remove that directory when replcaing cache
 // TODO: Add flow types
 // TODO: Tests
 // TODO: Performance benchmark
