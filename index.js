@@ -1,14 +1,24 @@
-const createFileStorage = require("./storage/file");
-const { md5, fstat, readStream } = require("./utils");
+const fs = require("fs");
+const path = require("path");
+const promisify = require("util").promisify;
+const rimraf = promisify(require("rimraf"));
+const {
+  mkdirp,
+  hash,
+  fstat,
+  readStream,
+  writeStream,
+  getOptsHash
+} = require("./utils");
 const CachefError = require("./error");
 
-module.exports = async function createCache(opts = {}, storage) {
-  storage = storage || (await createFileStorage(opts));
+const unlink = promisify(fs.unlink);
 
-  const optsHash = Object.keys(opts).reduce(
-    (acc, key) => `${acc};${key}:${String(opts[key])}`,
-    ""
-  );
+module.exports = async function createCache(opts = {}) {
+  const dir = path.resolve(opts.dir || ".cache");
+  await mkdirp(dir);
+
+  const optsHash = getOptsHash(opts);
 
   return {
     _keyCache: [],
@@ -19,18 +29,22 @@ module.exports = async function createCache(opts = {}, storage) {
         return this._keyCache[`${filename}:${mtime}:${optsHash}`];
       }
       const fileContent = await readStream(filename);
-      const key = `${md5(filename)}:${md5(fileContent)}:${md5(optsHash)}`;
+      const key = `${hash(filename)}:${hash(fileContent)}:${hash(optsHash)}`;
       this._keyCache[`${filename}:${mtime}:${optsHash}`] = key;
       return key;
     },
 
+    _getCacheFileName(key) {
+      return path.join(dir, `${key}.cache`);
+    },
+
     async set(filename, data) {
       const key = await this._getCacheKey(filename);
+
+      if (await this.has(key)) return;
+
       try {
-        await storage.set(key, data);
-        if (storage.onUpdate) {
-          await storage.onUpdate("set", key);
-        }
+        return await writeStream(this._getCacheFileName(key), value);
       } catch (e) {
         try {
           await storage.delete(key);
@@ -46,13 +60,17 @@ module.exports = async function createCache(opts = {}, storage) {
 
     async has(filename) {
       const key = await this._getCacheKey(filename);
-      return await storage.has(key);
+      try {
+        return (await fstat(this._getCacheFileName(key))).isFile();
+      } catch (e) {
+        return false;
+      }
     },
 
     async get(filename) {
       const key = await this._getCacheKey(filename);
       try {
-        return await storage.get(key);
+        return await readStream(this._getCacheFileName(key));
       } catch (e) {
         throw new CachefError(
           `Unable to read '${filename}' from cache.`,
@@ -65,20 +83,22 @@ module.exports = async function createCache(opts = {}, storage) {
     async delete(filename) {
       const key = await this._getCacheKey(filename);
       try {
-        await storage.delete(key);
-        if (storage.onUpdate) {
-          await storage.onUpdate("delete", key);
-        }
+        return await unlink(this._getCacheFileName(key));
       } catch (e) {} // Ignore error
     },
 
     async clear() {
       try {
-        await storage.clear();
-        if (storage.onUpdate) {
-          await storage.onUpdate("clear", key);
-        }
+        await rimraf(dir);
+        await mkdirp(dir);
       } catch (e) {} // Ignore error
     }
   };
 };
+
+// TODO: Cache key cache (inception O.o)
+// TODO: Partially self cleaning be using file path as a directory name and remove that directory when replcaing cache
+// TODO: Add flow types
+// TODO: Tests
+// TODO: Performance benchmark
+// TODO: CI
