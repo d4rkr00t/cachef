@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const fs = require("fs");
 const promisify = require("util").promisify;
 
 const mkdirp = promisify(require("mkdirp"));
@@ -11,4 +12,14 @@ function md5(string) {
     .digest("hex");
 }
 
-module.exports = { md5, fstat, mkdirp };
+function readStream(filename) {
+  return new Promise(resolve => {
+    let data = "";
+    const readStream = fs.createReadStream(filename, "utf8");
+    readStream
+      .on("data", chunk => (data += chunk))
+      .on("end", () => resolve(data));
+  });
+}
+
+module.exports = { md5, fstat, mkdirp, readStream };

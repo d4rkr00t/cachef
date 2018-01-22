@@ -3,7 +3,7 @@ const path = require("path");
 const promisify = require("util").promisify;
 const stream = require("stream");
 const rimraf = promisify(require("rimraf"));
-const { mkdirp, fstat } = require("../utils");
+const { mkdirp, fstat, readStream } = require("../utils");
 
 const unlink = promisify(fs.unlink);
 
@@ -29,16 +29,6 @@ function writeStream(filename, content) {
       stream.end();
       resolve();
     });
-  });
-}
-
-function readStream(filename) {
-  return new Promise(resolve => {
-    let data = "";
-    const readStream = fs.createReadStream(filename, "utf8");
-    readStream
-      .on("data", chunk => (data += chunk))
-      .on("end", () => resolve(data));
   });
 }
 

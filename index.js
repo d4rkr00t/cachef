@@ -1,16 +1,27 @@
 const createFileStorage = require("./storage/file");
-const { md5, fstat } = require("./utils");
+const { md5, fstat, readStream } = require("./utils");
 const CachefError = require("./error");
 
 module.exports = async function createCache(opts = {}, storage) {
   storage = storage || (await createFileStorage(opts));
 
-  const optsHash = Object.keys(opts).reduce((acc, key) => `${acc};${key}:${String(opts[key])}`, "");
+  const optsHash = Object.keys(opts).reduce(
+    (acc, key) => `${acc};${key}:${String(opts[key])}`,
+    ""
+  );
 
   return {
+    _keyCache: [],
+
     async _getCacheKey(filename) {
       const { mtime } = await fstat(filename);
-      return md5(`${filename}:${optsHash}:${mtime}`);
+      if (this._keyCache[`${filename}:${mtime}`]) {
+        return this._keyCache[`${filename}:${mtime}:${optsHash}`];
+      }
+      const fileContent = await readStream(filename);
+      const key = `${md5(filename)}:${md5(fileContent)}:${md5(optsHash)}`;
+      this._keyCache[`${filename}:${mtime}:${optsHash}`] = key;
+      return key;
     },
 
     async set(filename, data) {
@@ -25,7 +36,11 @@ module.exports = async function createCache(opts = {}, storage) {
           await storage.delete(key);
         } catch (e) {}
 
-        throw new CachefError(`Unable to add '${filename}' to cache.`, e.message, e.stack);
+        throw new CachefError(
+          `Unable to add '${filename}' to cache.`,
+          e.message,
+          e.stack
+        );
       }
     },
 
@@ -39,7 +54,11 @@ module.exports = async function createCache(opts = {}, storage) {
       try {
         return await storage.get(key);
       } catch (e) {
-        throw new CachefError(`Unable to read '${filename}' from cache.`, e.message, e.stack);
+        throw new CachefError(
+          `Unable to read '${filename}' from cache.`,
+          e.message,
+          e.stack
+        );
       }
     },
 
